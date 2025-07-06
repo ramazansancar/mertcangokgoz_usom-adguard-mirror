@@ -1,9 +1,8 @@
 name: runner
 
 on:
-    workflow_dispatch:
-    schedule:
-        - cron: "*/45 * * * *" # Every 45 minutes
+  schedule:
+    - cron: "*/50 * * * *" # Every 50 minutes
 
 jobs:
     generate_list:
