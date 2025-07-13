@@ -65,7 +65,7 @@ async def convert_to_adguard_format(items: list) -> list:
             processed_domains.add(domain)
 
             # Convert to AdGuard format
-            adguard_rule = f"||{domain}^$important"
+            adguard_rule = f"||{domain}"
             adguard_rules.append(adguard_rule)
         except Exception:
             print(f"ERROR: Invalid record - {record}")

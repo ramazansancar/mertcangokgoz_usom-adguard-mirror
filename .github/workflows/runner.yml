@@ -1,8 +1,9 @@
-name: runner
+name: fetch usom_adguard_blacklist
 
 on:
+  workflow_dispatch:
   schedule:
-    - cron: "*/50 * * * *" # Every 50 minutes
+    - cron: "0 */3 * * *" # Every 3 hours
 
 jobs:
     generate_list:
