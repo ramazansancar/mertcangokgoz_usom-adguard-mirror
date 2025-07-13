@@ -1,6 +1,5 @@
-import asyncio
-import aiohttp
-import aiofiles
+import requests
+import backoff
 import argparse
 from datetime import datetime
 import logging
@@ -8,8 +7,24 @@ import logging
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
+HEADERS: dict = {
+    "User-Agent": "Mozilla/5.0 (compatible; USOM-LIST-ADGUARD-FORMATTER; https://github.com/mertcangokgoz/usom-adguard-mirror)",
+    "Connection": "keep-alive",
+    "Accept": "*/*",
+}
 
-async def download_url_list(url: str) -> str:
+
+@backoff.on_exception(
+    backoff.expo,
+    (
+        requests.exceptions.Timeout,
+        requests.exceptions.RequestException,
+        requests.exceptions.HTTPError,
+    ),
+    max_tries=5,
+    max_time=60,
+)
+def download_url_list(url: str) -> str:
     """
     Download the USOM URL list from the given URL
 
@@ -21,22 +36,27 @@ async def download_url_list(url: str) -> str:
     """
     try:
         print(f"Downloading: {url}")
-        async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=30)
-        ) as session:
-            async with session.get(url) as response:
-                response.raise_for_status()
-                content = await response.text(encoding="utf-8")
-                return content
-    except aiohttp.ClientError as e:
-        print(f"ERROR: Download failed - {e}")
-        return None
+        response = requests.get(
+            url,
+            timeout=15,
+            headers=HEADERS,
+            allow_redirects=True,
+        )
+        response.raise_for_status()
+        content = response.text
+        return content
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"HTTP error occurred: {e}")
+        raise
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error occurred while downloading the URL list: {e}")
+        raise
     except Exception as e:
-        print(f"ERROR: An unexpected error occurred - {e}")
+        logger.error(f"An unexpected error occurred: {e}")
         return None
 
 
-async def convert_to_adguard_format(items: list) -> list:
+def convert_to_adguard_format(items: list) -> list:
     """
     Convert the list of URLs to AdGuard format
 
@@ -68,13 +88,13 @@ async def convert_to_adguard_format(items: list) -> list:
             adguard_rule = f"||{domain}"
             adguard_rules.append(adguard_rule)
         except Exception:
-            print(f"ERROR: Invalid record - {record}")
+            logger.error(f"ERROR: Invalid record - {record}")
             continue
 
     return adguard_rules
 
 
-async def save_adguard_list(rules: list, filename: str) -> None:
+def save_adguard_list(rules: list, filename: str) -> None:
     """
     Save the AdGuard formatted rules to a file
 
@@ -86,31 +106,32 @@ async def save_adguard_list(rules: list, filename: str) -> None:
         None
     """
     try:
-        async with aiofiles.open(filename, "w", encoding="utf-8") as f:
+        with open(filename, "w", encoding="utf-8") as f:
             # AdGuard filter başlığı
-            await f.write("! Title: USOM Blacklist (AdGuard Format)\n")
-            await f.write(
+            f.write("! Title: USOM Blacklist (AdGuard Format)\n")
+            f.write(
                 "! Description: USOM zararlı URL listesinin AdGuard formatına dönüştürülmüş halini içerir\n"
             )
-            await f.write(
+            f.write(
                 f"! Last Modified: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
             )
-            await f.write(f"! Total Rules: {len(rules)}\n")
-            await f.write("! Homepage: https://www.usom.gov.tr/\n")
-            await f.write("!\n")
+            f.write(f"! Total Rules: {len(rules)}\n")
+            f.write("! Homepage: https://www.usom.gov.tr/url-list.txt\n")
+            f.write("!\n")
 
             # Kuralları yaz
             for rule in rules:
-                await f.write(rule + "\n")
+                f.write(rule + "\n")
 
-        print(f"AdGuard blacklist successfully saved: {filename}")
-        print(f"Total number of rules: {len(rules)}")
+        logger.info(f"AdGuard list saved to {filename}")
+        logger.info(f"Total rules: {len(rules)}")
 
     except Exception as e:
-        print(f"ERROR: File could not be saved - {e}")
+        logger.error(f"ERROR: Failed to save AdGuard list - {e}")
+        raise
 
 
-async def main():
+def main():
     parser = argparse.ArgumentParser(
         description="Convert USOM URL list to AdGuard format"
     )
@@ -130,28 +151,28 @@ async def main():
 
     args = parser.parse_args()
 
-    content = await download_url_list(args.url)
+    content = download_url_list(args.url)
     if not content:
         return 1
 
     urls = content.split("\n")
 
     if args.verbose:
-        print(f"Total number of lines: {len(urls)}")
+        logger.info(f"Total URLs downloaded: {len(urls)}")
 
     # AdGuard formatına dönüştür
-    print("Converting to AdGuard format...")
-    adguard_rules = await convert_to_adguard_format(urls)
+    logger.info("Converting URLs to AdGuard format...")
+    adguard_rules = convert_to_adguard_format(urls)
 
     if not adguard_rules:
-        print("ERROR: No valid record found")
+        logger.error("No valid rules to save.")
         return 1
 
     # Dosyaya kaydet
-    await save_adguard_list(adguard_rules, args.output)
+    save_adguard_list(adguard_rules, args.output)
 
     return 0
 
 
 if __name__ == "__main__":
-    exit(asyncio.run(main()))
+    exit(main())
