@@ -2,7 +2,7 @@
 
 Bu repo USOM'un [Malware URL](https://www.usom.gov.tr/adres) listesini AdGuard için uyarlamak amacıyla oluşturulmuştur.
 
-45 dakikada bir güncellenmektedir. Duplike edilen URL'ler ve yorum satırları otomatik olarak kaldırılmaktadır.
+Üç saatte bir kez olmak üzere güncellenmektedir. Duplike edilen URL'ler ve yorum satırları otomatik olarak kaldırılmaktadır.
 
 ## Kurulum
 
