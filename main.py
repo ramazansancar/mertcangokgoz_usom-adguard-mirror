@@ -2,22 +2,19 @@ import requests
 import backoff
 import argparse
 from datetime import datetime
+from constant import HEADERS, PROXY
 import logging
+import os
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO, format="%(message)s")
-
-HEADERS: dict = {
-    "User-Agent": "Mozilla/5.0 (compatible; USOM-LIST-ADGUARD-FORMATTER; https://github.com/mertcangokgoz/usom-adguard-mirror)",
-    "Connection": "keep-alive",
-    "Accept": "*/*",
-}
 
 
 @backoff.on_exception(
     backoff.expo,
     (
         requests.exceptions.Timeout,
+        requests.exceptions.ReadTimeout,
         requests.exceptions.RequestException,
         requests.exceptions.HTTPError,
     ),
@@ -40,6 +37,7 @@ def download_url_list(url: str) -> str:
             url,
             timeout=15,
             headers=HEADERS,
+            proxies=PROXY if os.getenv("PROXY") else None,
             allow_redirects=True,
         )
         response.raise_for_status()

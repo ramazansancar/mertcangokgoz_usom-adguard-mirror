@@ -26,6 +26,8 @@ jobs:
 
       - name: Download URLs
         run: python main.py
+        env:
+          PROXY: ${{ secrets.PROXY }}
 
       - name: Commit and push changes
         run: |
