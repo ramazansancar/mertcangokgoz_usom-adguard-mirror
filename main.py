@@ -15,10 +15,11 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
     (
         requests.exceptions.Timeout,
         requests.exceptions.ReadTimeout,
+        requests.exceptions.ConnectionError,
         requests.exceptions.RequestException,
         requests.exceptions.HTTPError,
     ),
-    max_tries=5,
+    max_tries=6,
     max_time=60,
 )
 def download_url_list(url: str) -> str:
@@ -35,14 +36,12 @@ def download_url_list(url: str) -> str:
         print(f"Downloading: {url}")
         response = requests.get(
             url,
-            timeout=15,
             headers=HEADERS,
             proxies=PROXY if os.getenv("PROXY") else None,
             allow_redirects=True,
         )
         response.raise_for_status()
-        content = response.text
-        return content
+        return response.text
     except requests.exceptions.HTTPError as e:
         logger.error(f"HTTP error occurred: {e}")
         raise
