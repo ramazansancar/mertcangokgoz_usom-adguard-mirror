@@ -32,4 +32,4 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add -A
-          git diff --name-only --cached --exit-code || ( git commit -am "update usom_adguard_blacklist" && git push )
+          git diff --name-only --cached --exit-code || ( git commit -am "update usom blacklists" && git push )
